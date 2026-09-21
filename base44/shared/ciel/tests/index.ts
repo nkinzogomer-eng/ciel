@@ -7,6 +7,13 @@ import './phaseA/decision.test.ts';
 import './phaseA/ledger.test.ts';
 import './phaseA/budget.test.ts';
 import './phaseA/independence.test.ts';
+import './phaseB/persistence.test.ts';
+import './phaseC/execution.test.ts';
+import './phaseC/goalKernel.test.ts';
+import './phaseD/verification.test.ts';
+import './phaseE/invalidation.test.ts';
+import './phaseF/budgetLoop.test.ts';
+import './phaseG/learning.test.ts';
 import { runAll } from './runner.ts';
 
 export { runAll };

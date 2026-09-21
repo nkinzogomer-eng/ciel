@@ -1,0 +1,33 @@
+{
+  "name": "CielRecord",
+  "type": "object",
+  "description": "Generic persistence row for the Ciel MemoryStore. One row per Ciel record; the Core never knows this entity exists.",
+  "properties": {
+    "collection": {
+      "type": "string",
+      "description": "Ciel collection name (missions, tasks, events, checkpoints, ...)"
+    },
+    "record_id": {
+      "type": "string",
+      "description": "Ciel record id, unique within its collection"
+    },
+    "mission_id": {
+      "type": "string",
+      "description": "Owning mission id when the record belongs to one"
+    },
+    "sequence": {
+      "type": "number",
+      "description": "Ledger sequence number for append-only events"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "The Ciel record itself"
+    }
+  },
+  "required": [
+    "collection",
+    "record_id",
+    "payload"
+  ]
+}
