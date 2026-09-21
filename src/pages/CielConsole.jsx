@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Loader2, RefreshCw } from 'lucide-react';
 import TestResults from '@/components/ciel/TestResults';
 import ComponentTable from '@/components/ciel/ComponentTable';
+import PersistenceCheck from '@/components/ciel/PersistenceCheck';
 
 export default function CielConsole() {
   const [data, setData] = useState(null);
@@ -61,9 +62,11 @@ export default function CielConsole() {
             <TabsList className="mb-4">
               <TabsTrigger value="tests">Tests</TabsTrigger>
               <TabsTrigger value="components">État des composants</TabsTrigger>
+              <TabsTrigger value="persistence">Persistance</TabsTrigger>
             </TabsList>
             <TabsContent value="tests"><TestResults results={r} /></TabsContent>
             <TabsContent value="components"><ComponentTable components={data.components} /></TabsContent>
+            <TabsContent value="persistence"><PersistenceCheck /></TabsContent>
           </Tabs>
         </>
       )}

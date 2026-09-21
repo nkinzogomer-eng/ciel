@@ -2,7 +2,7 @@
 // Updated at the end of every phase. Never mark a stub as IMPLEMENTED.
 import { ComponentStatus as S } from './core/types.ts';
 
-export const PHASE = 'A';
+export const PHASE = 'G';
 
 export const COMPONENT_STATUS = Object.freeze([
   // --- Core vocabulary & primitives ---
@@ -30,27 +30,30 @@ export const COMPONENT_STATUS = Object.freeze([
   { component: 'IntelligenceProvider interface + AI output contract + CognitiveContext', layer: 'interface', status: S.TESTED_IN_BASE44, phase: 'A' },
   // --- Adapters ---
   { component: 'MemoryStore: in-memory (reference / tests)', layer: 'adapter', status: S.TESTED_IN_BASE44, phase: 'A' },
-  { component: 'MemoryStore: Base44 entities (prototype persistence)', layer: 'adapter', status: S.NOT_IMPLEMENTED, phase: 'B' },
+  { component: 'MemoryStore: Base44 entities (real persistence, restart-verified)', layer: 'adapter', status: S.TESTED_IN_BASE44, phase: 'B' },
   { component: 'MemoryStore: SQLite + migrations', layer: 'adapter', status: S.REQUIRES_EXTERNAL_RUNTIME, phase: 'B (schema) / external (runtime)' },
   { component: 'IntelligenceProvider: null (AI disabled)', layer: 'adapter', status: S.TESTED_IN_BASE44, phase: 'A' },
   { component: 'IntelligenceProvider: mock (scripted, tests)', layer: 'adapter', status: S.TESTED_IN_BASE44, phase: 'A' },
   { component: 'IntelligenceProvider: Anthropic / Claude', layer: 'adapter', status: S.NOT_IMPLEMENTED, phase: 'Milestone 2' },
   // --- Core engines (Phases B–G) ---
-  { component: 'Mission Ledger service', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'B' },
-  { component: 'Checkpoint / Recovery engine', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'B/E' },
-  { component: 'Goal Kernel (rule-based intake, no AI)', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'C' },
-  { component: 'Mission Compiler', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'C' },
-  { component: 'Mission Graph executor (deterministic)', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'C' },
-  { component: 'Capability Registry', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'C' },
-  { component: 'Arbitration', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'D' },
-  { component: 'Verification Engine (4 verifiers)', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'D' },
-  { component: 'State Invalidation engine (fingerprint cascade)', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'E' },
-  { component: 'Budget Manager / Policy Plane / Loop Detection', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'F' },
-  { component: 'Experience Learning / Calibration / Self Model / Diagnostics', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'G' },
-  { component: 'Reasoning / Strategy / Meta-reasoning engines', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'D/G' },
+  { component: 'Mission Ledger service', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'B' },
+  { component: 'Checkpoint / Recovery engine', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'B/E' },
+  { component: 'Goal Kernel (rule-based intake, no AI)', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'C' },
+  { component: 'Goal Kernel: prose → executable plan', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'Milestone 2 (needs a model)' },
+  { component: 'Mission Compiler', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'C' },
+  { component: 'Mission Graph executor (deterministic)', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'C' },
+  { component: 'Capability Registry', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'C' },
+  { component: 'Arbitration', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'D' },
+  { component: 'Verification Engine (predicate / independent / consistency / human)', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'D' },
+  { component: 'Strategy selection (contextual, sunk-cost-independent)', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'D' },
+  { component: 'State Invalidation engine (fingerprint cascade)', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'E' },
+  { component: 'Budget Manager / Policy Plane', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'F' },
+  { component: 'Loop / repetition detection', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'F' },
+  { component: 'Experience Learning / Calibration / Self Model', layer: 'core', status: S.TESTED_IN_BASE44, phase: 'G' },
+  { component: 'Meta-reasoning (AI-assisted replanning)', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'Milestone 2' },
   { component: 'Cognitive Sufficiency', layer: 'core', status: S.NOT_IMPLEMENTED, phase: 'Milestone 2' },
   // --- Capabilities ---
-  { component: 'Deterministic capabilities (compute, transform, http_fetch, ciel_state)', layer: 'capability', status: S.NOT_IMPLEMENTED, phase: 'C' },
+  { component: 'Deterministic capabilities (compute, transform, kv, notify, probes)', layer: 'capability', status: S.TESTED_IN_BASE44, phase: 'C' },
   { component: 'Shell / Filesystem / Git / MCP adapters', layer: 'capability', status: S.REQUIRES_EXTERNAL_RUNTIME, phase: 'C (interface+mock)' },
   { component: 'Hermes / OpenClaw adapters', layer: 'capability', status: S.REQUIRES_EXTERNAL_RUNTIME, phase: 'later (interface+mock)' },
   // --- Interfaces (surfaces) ---
