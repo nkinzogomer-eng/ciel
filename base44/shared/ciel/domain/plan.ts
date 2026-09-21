@@ -6,6 +6,47 @@ import { createMission, createTask } from './mission.ts';
 
 export const PLAN_FORMAT_VERSION = 1;
 
+// The plan format as a JSON schema, so a provider can be constrained to emit exactly this.
+// validatePlan remains the authority: this schema only shapes the request.
+export const PLAN_JSON_SCHEMA = Object.freeze({
+  type: 'object',
+  properties: {
+    goal: { type: 'string' },
+    tasks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          goal: { type: 'string' },
+          // params travel as a JSON string: free-form objects are not preserved by every
+          // structured-output API. The synthesizer parses it back before validation.
+          action: {
+            type: 'object',
+            properties: { capability: { type: 'string' }, params_json: { type: 'string' } },
+            required: ['capability', 'params_json'],
+          },
+          dependencies: { type: 'array', items: { type: 'string' } },
+          verification: {
+            type: 'object',
+            properties: {
+              kind: { type: 'string', enum: ['PREDICATE'] },
+              predicate: {
+                type: 'object',
+                properties: { path: { type: 'string' }, op: { type: 'string', enum: ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists'] }, value: {} },
+                required: ['path', 'op'],
+              },
+            },
+            required: ['kind', 'predicate'],
+          },
+        },
+        required: ['id', 'goal', 'action', 'dependencies', 'verification'],
+      },
+    },
+  },
+  required: ['goal', 'tasks'],
+});
+
 export function validatePlan(plan) {
   const errors = [];
   if (!plan || typeof plan !== 'object') return { ok: false, errors: ['plan must be an object'] };

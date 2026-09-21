@@ -14,6 +14,7 @@ import './phaseD/verification.test.ts';
 import './phaseE/invalidation.test.ts';
 import './phaseF/budgetLoop.test.ts';
 import './phaseG/learning.test.ts';
+import './phaseH/intelligence.test.ts';
 import { runAll } from './runner.ts';
 
 export { runAll };
