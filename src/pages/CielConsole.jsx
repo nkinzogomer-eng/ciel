@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import TestResults from '@/components/ciel/TestResults';
 import ComponentTable from '@/components/ciel/ComponentTable';
 import PersistenceCheck from '@/components/ciel/PersistenceCheck';
+import CheckPanel from '@/components/ciel/CheckPanel';
 
 export default function CielConsole() {
   const [data, setData] = useState(null);
@@ -63,10 +64,18 @@ export default function CielConsole() {
               <TabsTrigger value="tests">Tests</TabsTrigger>
               <TabsTrigger value="components">État des composants</TabsTrigger>
               <TabsTrigger value="persistence">Persistance</TabsTrigger>
+              <TabsTrigger value="intelligence">Intelligence</TabsTrigger>
             </TabsList>
             <TabsContent value="tests"><TestResults results={r} /></TabsContent>
             <TabsContent value="components"><ComponentTable components={data.components} /></TabsContent>
             <TabsContent value="persistence"><PersistenceCheck /></TabsContent>
+            <TabsContent value="intelligence">
+              <CheckPanel
+                functionName="cielIntelligenceCheck"
+                title="Contrôle d'intelligence réel"
+                description="Un vrai modèle propose un plan ; Ciel le valide, refuse les capacités inventées et ne compte comme réussi que ce qui est vérifié."
+              />
+            </TabsContent>
           </Tabs>
         </>
       )}
