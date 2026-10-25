@@ -12,7 +12,8 @@ import { RuntimeRequirement } from '../base44/shared/ciel/core/types.ts';
 import { createInMemoryStore } from '../base44/shared/ciel/adapters/memory/inMemoryStore.ts';
 import { createPrismDiscoveryCapability } from '../base44/shared/ciel/capabilities/prismDiscovery.ts';
 
-const [prismRootArg, sourcePathArg] = process.argv.slice(2);
+const [prismRootArg, sourcePathArg, chosenAdapter = 'starlette_static'] = process.argv.slice(2);
+if (!['starlette_static', 'django_safe_join'].includes(chosenAdapter)) throw new Error('unapproved external adapter');
 if (!prismRootArg || !sourcePathArg) throw new Error('Usage: prism-ciel-e2e.mjs <prism-repo> <pinned-source-file>');
 const prismRoot = realpathSync(prismRootArg);
 const source = realpathSync(sourcePathArg);
@@ -21,10 +22,11 @@ if (!source.startsWith(allowedRoot + sep)) throw new Error('source must be insid
 const sourceSha = createHash('sha256').update(readFileSync(source)).digest('hex');
 const temp=mkdtempSync(join(tmpdir(),'ciel-prism-e2e-'));
 let calls=0;
+let lastPrismResult=null;
 try {
   const runPrism=async ({adapter,source_path,source_sha256,max_probes,mission_id,task_id})=>{
     calls+=1;
-    if (adapter!=='starlette_static') throw new Error('unexpected external adapter');
+    if (adapter!==chosenAdapter) throw new Error('unexpected external adapter');
     if (source_path!==source || source_sha256!==sourceSha) throw new Error('unexpected source');
     const out=join(temp,'result.json');
     const cmd=[
@@ -42,7 +44,8 @@ try {
     if(proc.status!==0)throw new Error(
       'PRISM external process failed '+proc.status+'\n'+proc.stderr+'\n'+proc.stdout
     );
-    return JSON.parse(readFileSync(join(temp,'result.ciel.json'),'utf8'));
+    lastPrismResult=JSON.parse(readFileSync(join(temp,'result.ciel.json'),'utf8'));
+    return lastPrismResult;
   };
   const authorizeSource=async ({source_path,source_sha256})=>
     source_path===source && source_sha256===sourceSha &&
@@ -57,9 +60,9 @@ try {
   if(!ciel.registry.check('prism.cyber.discovery').allowed)throw new Error('policy denied configured local capability');
   if(ciel.ai_enabled)throw new Error('PRISM mission must run with AI disabled');
   const task={
-    id:'local-audit',goal:'Test local Starlette static path containment',
+    id:'local-audit',goal:'Test authorized local path containment',
     action:{capability:'prism.cyber.discovery',params:{
-      adapter:'starlette_static',source_path:source,
+      adapter:chosenAdapter,source_path:source,
       source_sha256:sourceSha,max_probes:64,
     }},
     // Critically, no independent verifier registered in this phase.
@@ -68,6 +71,10 @@ try {
   const {mission}=await ciel.compiler.compile({goal:'Check allowed pinned local package behavior',tasks:[task]});
   const execution=await ciel.executor.run(mission.id);
   if(calls!==1)throw new Error('Ciel did not invoke PRISM exactly once');
+  const expectedVerdict=chosenAdapter==='django_safe_join' ? 'NO_WITNESS_NOT_SAFE' : 'LOCAL_PROPERTY_WITNESS';
+  if(lastPrismResult?.observation?.status!==expectedVerdict)
+    throw new Error('unexpected untrusted PRISM result status: '+lastPrismResult?.observation?.status);
+
   if(execution.outcome==='COMPLETED_VERIFIED')throw new Error('Ciel falsely marked security proof VERIFIED');
   if(!['COMPLETED_UNVERIFIED','COMPLETED_PARTIALLY_VERIFIED'].includes(execution.outcome))
     throw new Error('Unexpected Ciel state: '+execution.outcome);
@@ -77,6 +84,9 @@ try {
     permission:'cyber:local-audit',
     runtime:'EXTERNAL',
     calls,
+    adapter:chosenAdapter,
+    prism_status:lastPrismResult.observation.status,
+    observed_property_violations:lastPrismResult.observation.observed_property_violations,
     ai_enabled:ciel.ai_enabled,
     ciel_mission_outcome:execution.outcome,
     verified_by_independent_ciel_engine:false,
