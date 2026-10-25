@@ -6,7 +6,7 @@
 import { CielError, ComponentStatus, RuntimeRequirement } from '../core/types.ts';
 import { createManifest } from '../interfaces/capability.ts';
 
-const ADAPTERS = Object.freeze(['starlette_static', 'werkzeug_windows_path']);
+const ADAPTERS = Object.freeze(['starlette_static', 'werkzeug_windows_path', 'django_safe_join']);
 
 export function validatePrismEnvelope(data, { mission_id, task_id, source_sha256 }) {
   if (!data || data.schema !== 'scm.prism.ciel-capability.v1' ||
