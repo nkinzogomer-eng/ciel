@@ -1,0 +1,50 @@
+name: Ciel x PRISM external local discovery capability
+
+on:
+  push:
+    branches: [integration/prism-d24g-local-discovery]
+    paths:
+      - ".github/workflows/prism-local-discovery.yml"
+      - "base44/shared/ciel/capabilities/prismDiscovery.ts"
+      - "base44/shared/ciel/tests/phaseI/prismIntegration.test.ts"
+      - "base44/shared/ciel/tests/index.ts"
+      - "scripts/prism-ciel-e2e.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ciel-real-prism-local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test Ciel policy/schema and unverified evidence handling
+        run: |
+          node --input-type=module -e "import './base44/shared/ciel/tests/phaseI/prismIntegration.test.ts'; const {runAll}=await import('./base44/shared/ciel/tests/runner.ts'); const x=await runAll(); console.log(JSON.stringify(x)); if(x.failed)process.exit(1);"
+      - name: Checkout exact PRISM experimental discovery implementation
+        uses: actions/checkout@v4
+        with:
+          repository: nkinzogomer-eng/PRISM
+          ref: e5a7a3c3802632212e58f8523d09c82883e74f5d
+          path: external/prism
+      - name: Checkout authorized historical local third-party source
+        run: |
+          mkdir -p external/starlette
+          git -C external/starlette init
+          git -C external/starlette remote add origin https://github.com/Kludex/starlette.git
+          git -C external/starlette fetch --depth 1 origin 8965f8849977b5752e415722a83aa00049f80ff3
+          git -C external/starlette checkout --detach FETCH_HEAD
+          test "$(git -C external/starlette rev-parse HEAD)" = 8965f8849977b5752e415722a83aa00049f80ff3
+      - name: Run full Ciel mission through real external PRISM Python process
+        run: |
+          node scripts/prism-ciel-e2e.mjs \
+            external/prism \
+            external/starlette/starlette/staticfiles.py

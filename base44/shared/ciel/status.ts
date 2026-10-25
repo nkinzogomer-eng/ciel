@@ -57,6 +57,7 @@ export const COMPONENT_STATUS = Object.freeze([
   { component: 'Deterministic capabilities (compute, transform, kv, notify, probes)', layer: 'capability', status: S.TESTED_IN_BASE44, phase: 'C' },
   { component: 'Shell / Filesystem / Git / MCP adapters', layer: 'capability', status: S.REQUIRES_EXTERNAL_RUNTIME, phase: 'C (interface+mock)' },
   { component: 'Hermes / OpenClaw adapters', layer: 'capability', status: S.REQUIRES_EXTERNAL_RUNTIME, phase: 'later (interface+mock)' },
+  { component: 'PRISM source-only cyber discovery capability (policy checked; external runner injected; proof UNVERIFIED)', layer: 'capability', status: S.REQUIRES_EXTERNAL_RUNTIME, phase: 'I (experimental)' },
   // --- Interfaces (surfaces) ---
   { component: 'Base44 console (status + test dashboard)', layer: 'surface', status: S.IMPLEMENTED, phase: 'A (minimal) / H' },
   { component: 'Telegram adapter', layer: 'surface', status: S.REQUIRES_EXTERNAL_RUNTIME, phase: 'later' },
