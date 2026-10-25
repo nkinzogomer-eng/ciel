@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: nkinzogomer-eng/PRISM
-          ref: e5a7a3c3802632212e58f8523d09c82883e74f5d
+          ref: 381f392cbd5bf7bd26c7f1135414765fe4f5efb6
           path: external/prism
       - name: Checkout authorized historical local third-party source
         run: |
@@ -48,3 +48,17 @@ jobs:
           node scripts/prism-ciel-e2e.mjs \
             external/prism \
             external/starlette/starlette/staticfiles.py
+
+      - name: Fetch independently pinned current Django source for second Ciel mission
+        run: |
+          mkdir -p external/django/django/utils
+          curl --fail --silent --show-error --location --retry 3 \
+            https://raw.githubusercontent.com/django/django/0e128d524d0a7c55a955570d6e5da983ac6ce6c7/django/utils/_os.py \
+            -o external/django/django/utils/_os.py
+          test -s external/django/django/utils/_os.py
+      - name: Ciel invokes real current-source PRISM scan and retains non-safe UNKNOWN
+        run: |
+          node scripts/prism-ciel-e2e.mjs \
+            external/prism \
+            external/django/django/utils/_os.py \
+            django_safe_join
