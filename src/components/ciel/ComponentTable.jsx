@@ -3,7 +3,7 @@ import StatusBadge from './StatusBadge';
 
 const LAYERS = ['core', 'domain', 'interface', 'adapter', 'capability', 'surface'];
 
-export default function ComponentTable({ components }) {
+export default function ComponentTable({ components, notClaimed = [] }) {
   return (
     <div className="space-y-6">
       {LAYERS.filter((l) => components.some((c) => c.layer === l)).map((layer) => (
@@ -24,6 +24,19 @@ export default function ComponentTable({ components }) {
           </ul>
         </div>
       ))}
+
+      {notClaimed.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50">
+          <div className="border-b border-amber-300 px-4 py-2.5">
+            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-amber-900">
+              Ce que Ciel ne revendique pas
+            </h3>
+          </div>
+          <ul className="space-y-1.5 px-4 py-3 text-sm text-amber-900">
+            {notClaimed.map((claim) => <li key={claim}>{claim}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

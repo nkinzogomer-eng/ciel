@@ -2,33 +2,49 @@
 
 ## Project Context
 
-This is a Base44 app repository. Treat it as user-owned application code, keep changes focused on the user's request, and preserve existing project conventions.
+This repository holds **two things** with a hard boundary between them:
 
-Start with `README.md` for local setup, environment variables, and publish workflow.
+| Path | What it is | Rule |
+|------|------------|------|
+| `ciel-core/` | the portable cognitive core | no `@base44/*`, no `npm:`, no `node:` import in `core/ domain/ engines/ interfaces/ capabilities/`; only Web standard APIs |
+| `src/` + `base44/` | the Base44 console and its backend functions | may use the platform freely |
+
+`ciel-core/README.md` is the entry point for the core. `README.md` is the entry point for
+everything else. `ciel-core/status.ts` is the only honest map of what exists — keep it true.
+
+## Commands
+
+```bash
+npm test            # 172 portable tests (Node 22 needed for --experimental-strip-types)
+npm run lint        # ESLint over src/ and ciel-core/
+npm run build       # Vite build of the console
+npm run check       # lint + test + build
+npm run ciel:serve  # standalone HTTP API (needs a token, or --allow-anon)
+```
+
+There is no `typecheck` script on purpose: `tsc` reports hundreds of false positives on
+unannotated code and on the generated shadcn/ui components. Do not reintroduce one that
+fails without checking anything useful.
+
+## Key Files
+
+- `ciel-core/runtime.ts` — `createCiel()`: assembles everything by injection.
+- `ciel-core/orchestrator.ts` — the only end-to-end path: intention → mission → ledger.
+- `ciel-core/index.ts` — public surface of the core (validated export list).
+- `ciel-core/status.ts` — component status registry + `NOT_CLAIMED`.
+- `base44/functions/*/entry.ts` — platform surfaces; they import `../../../ciel-core/...`.
+- `base44/entities/CielRecord.jsonc` — generic persistence row, the Core never sees it.
+
+## Working Notes
+
+- A component is only listed in `status.ts` if the file it names exists. No aspirational rows.
+- A new engine needs a suite in `ciel-core/tests/phaseX/` and a `status.ts` line.
+- If you change the shape of `index.ts`, re-check every export actually exists (a phantom
+  re-export breaks the standalone server at import time, not at type-check time).
+- `base44 dev` runs the backend *and* the frontend; do not start `npm run dev` next to it.
+- Never commit `.env.local` or `base44/.app.jsonc` (both gitignored).
 
 ## Base44 References
 
 - CLI overview: https://docs.base44.com/developers/references/cli/get-started/overview.md
 - Agent skills: https://docs.base44.com/developers/backend/overview/skills.md
-
-If your agent supports Agent Skills, install or update Base44 skills before Base44-specific work:
-
-```bash
-npx skills add base44/skills
-```
-
-## Key Files
-
-- `src/`: frontend application source.
-- `src/api/base44Client.js`: frontend Base44 SDK client.
-- `vite.config.js`: Vite config and Base44 Vite plugin setup.
-- `.env.local`: local-only environment values; never commit secrets.
-
-## Working Notes
-
-- Use `base44 dev` as the default local development command when you need the local Base44 backend. It can run the backend and frontend together.
-- When docs or code mention the frontend being started automatically, that usually means the Base44 project config includes `site.serveCommand`, for example `"serveCommand": "npm run dev"` in `base44/config.jsonc`.
-- Use `npm run dev` only for frontend-only work against the hosted Base44 backend.
-- Prefer the existing Base44 CLI workflow over adding new npm scripts for Base44-specific tasks.
-- Reuse the existing SDK client and Vite plugin patterns before adding new Base44 integration paths.
-- Run the relevant checks from `package.json` before finishing code changes.

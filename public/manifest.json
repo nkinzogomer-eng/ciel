@@ -1,0 +1,17 @@
+{
+  "name": "Ciel — Console du noyau",
+  "short_name": "Ciel",
+  "description": "Noyau cognitif portable : missions vérifiées, journal chaîné, IA optionnelle.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/ciel.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

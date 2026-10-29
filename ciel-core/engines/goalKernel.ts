@@ -10,7 +10,10 @@ const QUESTION_MARKERS = ['?', 'pourquoi', 'comment', 'qu\'est-ce', 'quoi', 'qui
 const ADVICE_MARKERS = ['conseille', 'recommande', 'devrais-je', 'que penses-tu', 'ton avis', 'should i', 'advise', 'recommend', 'what do you think'];
 const SMALL_TALK = ['bonjour', 'salut', 'merci', 'ça va', 'hello', 'hi ', 'thanks', 'thank you'];
 const ACTION_MARKERS = ['crée', 'créer', 'ajoute', 'envoie', 'supprime', 'déploie', 'lance', 'exécute', 'mets à jour', 'configure',
-  'create', 'add', 'send', 'delete', 'deploy', 'run', 'execute', 'update', 'build', 'fix'];
+  'écris', 'ecris', 'écrire', 'stocke', 'enregistre', 'relis', 'calcule', 'vérifie', 'verifie', 'génère', 'genere',
+  'planifie', 'organise', 'traite', 'analyse', 'corrige', 'répare', 'repare', 'installe', 'publie', 'remplace',
+  'create', 'add', 'send', 'delete', 'deploy', 'run', 'execute', 'update', 'build', 'fix',
+  'write', 'save', 'store', 'calculate', 'check', 'generate', 'analyze', 'repair', 'install', 'publish', 'replace'];
 
 function hits(text, markers) {
   const t = text.toLowerCase();
@@ -41,8 +44,8 @@ export function classifyIntake(input) {
   if (action.length) {
     return {
       kind: IntakeKind.MISSION, executable: false, plan: null,
-      reason: `action markers: ${action.join(', ')} — an executable plan cannot be derived from prose without a language model`,
-      requires: ['a structured mission plan (or an enabled intelligence provider, not implemented yet)'],
+      reason: `action markers: ${action.join(', ')} — this rule-based kernel cannot derive an executable plan from prose without a language model`,
+      requires: ['a structured mission plan, or ai.enabled with a reachable intelligence provider'],
     };
   }
 

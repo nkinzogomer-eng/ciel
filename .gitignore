@@ -1,6 +1,7 @@
 #env
 .env
 .env.*
+!.env.example
 
 # Logs
 /logs
@@ -13,6 +14,9 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# Local durable state of the standalone core (ciel-core/bin/ciel.mjs serve --data ./data)
+data/
 dist-ssr
 *.local
 

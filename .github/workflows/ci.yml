@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    name: lint · tests · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint (React console + portable core)
+        run: npm run lint
+
+      - name: Tests (portable core, no Base44, no Deno)
+        run: npm test
+
+      - name: Build (console)
+        run: npm run build
+
+      # The core must stay free of platform and npm imports. If this fails, invariant #1 is broken.
+      - name: Portability check
+        run: |
+          if grep -rn --include='*.ts' -E "from ['\"](@base44|npm:|node:)" ciel-core/core ciel-core/domain ciel-core/engines ciel-core/interfaces ciel-core/capabilities; then
+            echo "::error::the portable core imports a platform or runtime-specific module"
+            exit 1
+          fi
+          echo "core is free of platform/runtime imports (except adapters, by design)"

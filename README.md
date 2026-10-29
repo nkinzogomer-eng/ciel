@@ -1,261 +1,280 @@
 # Ciel — noyau cognitif portable
 
 > Ce README est écrit pour être lu par une IA (ou un développeur) qui arrive sans contexte.
-> Il décrit **ce qu'est Ciel**, **comment il est construit**, **pourquoi il est construit ainsi**,
-> **ce qui est réellement implémenté et testé**, et **ce qui ne l'est pas**.
-> Règle du projet : rien dans ce document ne décrit une fonctionnalité qui n'existe pas.
-> Si un composant est un stub, il est marqué comme tel — ici et dans `base44/shared/ciel/status.ts`.
+> Il décrit **ce qu'est Ciel**, **comment il est construit**, **ce qui est réellement
+> implémenté et testé**, et **ce qui ne l'est pas**.
+> Règle du projet : rien ici ne décrit une fonctionnalité qui n'existe pas.
+> Si un composant est un stub, ou n'existe pas du tout, il est marqué comme tel — ici et dans
+> `ciel-core/status.ts`, qui est la source de vérité.
 
 ---
 
 ## 1. Qu'est-ce que Ciel
 
-Ciel est un **noyau cognitif** : un système qui reçoit une intention, en fait une mission
-structurée, l'exécute pas à pas, **vérifie** chaque résultat, journalise tout de façon
-inviolable, sait reprendre après un crash sans répéter d'action dangereuse, et apprend de ses
-propres prédictions.
+Ciel est un **noyau cognitif** : il reçoit une intention, en fait une mission structurée,
+l'exécute pas à pas, **vérifie** chaque résultat, journalise tout dans une chaîne de hachages
+où toute altération est détectable, sait reprendre après un crash sans rejouer à l'aveugle une
+action dangereuse, et apprend de ses propres prédictions.
 
 Ce n'est **pas** un wrapper autour d'un modèle de langage. Le modèle est un composant optionnel
-et remplaçable. Ciel fonctionne entièrement sans IA (`AI_ENABLED=false`).
+et remplaçable. Ciel fonctionne entièrement sans IA (`ai.enabled = false` par défaut) : dans ce
+mode, il accepte un **plan structuré** et rien d'autre.
 
-### Les cinq invariants du projet
+Le noyau vit dans `ciel-core/` et **ne dépend d'aucune plateforme**. `base44/` n'est qu'une
+des surfaces possibles ; `src/` en est une autre.
 
-Tout le code découle de ces règles. Les enfreindre, c'est casser Ciel.
+### Les cinq invariants
 
 | # | Invariant | Conséquence dans le code |
 |---|-----------|--------------------------|
-| 1 | **Portabilité** — le noyau ne connaît pas Base44 | `base44/shared/ciel/` n'importe *jamais* le SDK Base44. Tout l'extérieur passe par des interfaces injectées. |
-| 2 | **L'IA propose, Ciel décide** | Une sortie de modèle est une *proposition* validée par `planSynthesis`, jamais une vérité. La confiance déclarée par le modèle est stockée à part et ne devient jamais une confiance interne. |
+| 1 | **Portabilité** — le noyau ne connaît aucune plateforme | `ciel-core/` n'importe ni `@base44/*` ni aucun paquet npm. Un test (`phaseA/independence`) le vérifie. |
+| 2 | **L'IA propose, Ciel décide** | Une sortie de modèle est une *proposition* validée par `planSynthesis`, jamais une vérité. La confiance déclarée par le modèle est stockée à part (`claimed`) et ne devient jamais une confiance interne. |
 | 3 | **Rien n'est vrai sans vérification** | Une tâche exécutée est `EXECUTED`, pas `VERIFIED`. Seul un vérificateur (prédicat, source indépendante, cohérence, humain) fait passer à `VERIFIED`. Une mission dont tout n'est pas vérifié ne rapporte jamais un succès. |
 | 4 | **Sécurité avant reprise** | Une action non idempotente interrompue n'est **jamais** rejouée à l'aveugle : sonde d'effet, sinon `WAITING_FOR_USER`. |
-| 5 | **Honnêteté d'état** | Chaque composant a un statut déclaré (`TESTED_IN_BASE44`, `REQUIRES_EXTERNAL_RUNTIME`, `NOT_IMPLEMENTED`). Aucun stub n'est présenté comme fini. |
+| 5 | **Honnêteté d'état** | Chaque composant a un statut déclaré dans `status.ts` : `TESTED`, `TESTED_IN_BASE44`, `IMPLEMENTED`, `NOT_IMPLEMENTED`, `REQUIRES_EXTERNAL_RUNTIME`. Un composant absent n'est pas listé comme prêt. |
+
+Le journal est **inviolable au sens détectable** (*tamper-evident*) : la chaîne de hachages
+révèle une modification, une suppression ou un trou de séquence. Elle ne l'*empêche* pas — il
+faudrait pour cela un ancrage externe, qui n'existe pas ici. `status.ts` (`NOT_CLAIMED`) le dit
+explicitement.
 
 ---
 
-## 2. Architecture en trois couches
+## 2. Deux façons de l'exécuter
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  SURFACES            console Base44 (src/pages/CielConsole) │
-│                      (Telegram, CLI : non implémentés)      │
-├─────────────────────────────────────────────────────────────┤
-│  ADAPTATEURS         MemoryStore : inMemory | Base44 entities│
-│  (remplaçables)      Intelligence : null | mock | LLM Base44 │
-│                      Capacités : référence déterministe      │
-├─────────────────────────────────────────────────────────────┤
-│  CIEL CORE           domaine + moteurs, TypeScript pur,      │
-│  (portable)          zéro dépendance plateforme              │
-└─────────────────────────────────────────────────────────────┘
-```
+| | Autonome (recommandé pour développer) | Console Base44 |
+|---|---|---|
+| Commande | `node --experimental-strip-types ciel-core/bin/ciel.mjs test` | `base44 dev` puis l'onglet Console |
+| Dépendances | **aucune** | `npm install` + CLI Base44 |
+| Stockage | mémoire, ou `adapters/fs` (durable) | entités Base44 |
+| Modèle | injecté (n'importe quel client) | `Core.InvokeLLM` de la plateforme |
+| Détail | [`ciel-core/README.md`](ciel-core/README.md) | § 9 de ce fichier |
 
-Le Core ne fait **aucun** appel implicite : l'horloge, les identifiants, le stockage, les
-capacités et le modèle sont tous **injectés** par `base44/shared/ciel/runtime.ts` (`createCiel`).
-C'est ce qui rend le noyau exécutable tel quel sur Node/Deno/Docker/VPS, hors de Base44.
-
-### Arborescence commentée
-
-```
-base44/shared/ciel/
-├── core/            vocabulaire partagé, indépendant de tout
-│   ├── types.ts         états, transitions légales, énumérations, CielError
-│   ├── clock.ts         temps injecté (jamais Date.now() dans le domaine)
-│   ├── ids.ts           identifiants injectés (déterministes en test)
-│   ├── fingerprint.ts   SHA-256 canonique — base des hachages et invalidations
-│   ├── predicate.ts     évaluateur de prédicats déterministe (vérification)
-│   └── config.ts        AI désactivée par défaut, budgets, dégradation
-├── domain/          modèles purs, sans effet de bord
-│   ├── mission.ts       mission/tâche + transitions + WAITING_FOR_USER
-│   ├── plan.ts          format de plan structuré : validation, tri topologique
-│   ├── knowledge.ts     niveaux épistémiques et règles de promotion
-│   ├── evidence.ts      observations, intégrité des preuves
-│   ├── decision.ts      primitive de décision (7 types, provenance)
-│   ├── confidence.ts    vecteur à 4 dimensions, global = maillon le plus faible
-│   ├── strategy.ts      performance contextuelle, abandon indépendant du coût engagé
-│   ├── actionGraph.ts   préconditions, dépendances, risque, politique de rejeu
-│   ├── ledger.ts        événements chaînés par hachage
-│   ├── checkpoint.ts    instantanés + plan de reprise
-│   ├── verification.ts  enregistrements de vérification et règle de résolution
-│   ├── budget.ts        temps/jetons/argent/appels, opérations protégées
-│   └── experience.ts    expériences, prédictions, calibration contextuelle
-├── engines/         la logique active
-│   ├── goalKernel.ts        intention → classe (conversation/question/conseil/mission), sans IA
-│   ├── planSynthesis.ts     prose → plan proposé par l'IA, puis validé par Ciel
-│   ├── missionCompiler.ts   plan → mission + tâches exécutables
-│   ├── executor.ts          exécution déterministe du graphe
-│   ├── capabilityRegistry.ts capacités déclarées avec manifeste
-│   ├── verificationEngine.ts applique les vérificateurs
-│   ├── arbitration.ts       choix entre options concurrentes
-│   ├── strategySelector.ts  sélection contextuelle de stratégie
-│   ├── invalidation.ts      cascade d'invalidation par empreinte
-│   ├── loopDetector.ts      détection de répétition / boucle
-│   ├── ledgerService.ts     journal append-only chaîné
-│   ├── checkpointService.ts sauvegarde synchrone avant action risquée
-│   ├── recoveryEngine.ts    reprise après crash, sonde avant rejeu
-│   ├── learning.ts          expérience → calibration → modèle de soi
-│   ├── metaReasoning.ts     échec de stratégie → repli déterministe, puis IA arbitrée
-│   └── sufficiency.ts       agir / chercher / demander / refuser
-├── interfaces/      contrats que les adaptateurs doivent respecter
-│   ├── capability.ts          manifeste : idempotent, réversible, effets, permissions
-│   ├── memoryStore.ts         persistance
-│   └── intelligenceProvider.ts contrat de sortie structurée obligatoire
-├── adapters/
-│   ├── memory/inMemoryStore.ts    référence + tests
-│   ├── base44/entityStore.ts      persistance réelle via l'entité CielRecord
-│   └── intelligence/{nullProvider,base44Provider}.ts
-├── capabilities/reference.ts  capacités déterministes (pur, réversible, irréversible, échec, sonde)
-├── tests/           harnais portable, résultats JSON agnostiques
-│   ├── runner.ts + helpers/rig.ts
-│   └── phaseA … phaseH/
-├── runtime.ts       createCiel() : assemble tout par injection
-└── status.ts        registre d'honnêteté : état réel de chaque composant
+```bash
+node --experimental-strip-types ciel-core/bin/ciel.mjs test      # 172 tests, ~0,4 s
+node --experimental-strip-types ciel-core/bin/ciel.mjs status    # registre d'honnêteté
+node --experimental-strip-types ciel-core/bin/ciel.mjs run plan.json
+node --experimental-strip-types ciel-core/bin/ciel.mjs serve --port 8787
 ```
 
 ---
 
-## 3. Le cycle de vie d'une mission (le chemin réel du code)
+## 3. Architecture
 
 ```
-intention (texte)
-   │
-   ├─ goalKernel.classify()            ── sans IA : conversation / question / conseil / mission
-   │
-   ├─ (si prose libre et IA activée)
-   │     planSynthesis.synthesize()    ── le modèle PROPOSE un plan JSON
-   │        ├─ contrat de sortie vérifié (pas de texte libre accepté)
-   │        ├─ plan.validate() : ids, actions, dépendances, cycles
-   │        ├─ capacités inconnues → REFUS (aucune invention)
-   │        └─ décision marquée « origine IA » → exige confirmation
-   │
-   ├─ missionCompiler.compile()        ── plan → mission + tâches, ordre topologique
-   │
-   └─ executor.run()                   ── pour chaque tâche, dans l'ordre :
-         ├─ préconditions + empreintes vérifiées
-         ├─ checkpointService.save()    (avant toute action risquée, synchrone)
-         ├─ capability.execute()        (aucun appel de modèle ici — jamais)
-         ├─ verificationEngine.verify() ── EXECUTED → VERIFIED | UNVERIFIED | CONTRADICTED
-         ├─ invalidation.cascade()      ── ce que cette action rend obsolète
-         ├─ budget.assess()             ── continuer / réduire / arrêter (vérif. protégée)
-         ├─ loopDetector.check()        ── répétition stérile → arrêt
-         └─ échec → metaReasoning       ── repli déterministe d'abord, IA arbitrée ensuite
-         │
-         ledgerService.append() à chaque étape (chaîné par hachage, rupture détectable)
+┌──────────────────────────────────────────────────────────────────┐
+│  SURFACES     console Base44 (src/pages/CielConsole)             │
+│               CLI (ciel-core/bin) · API HTTP (ciel-core/server)  │
+├──────────────────────────────────────────────────────────────────┤
+│  ADAPTATEURS  MemoryStore : in-memory | fs (durable) | Base44    │
+│  (injectés)   Intelligence : null | mock | LLM (invokeLLM)       │
+│               Capacités   : déterministes de référence           │
+├──────────────────────────────────────────────────────────────────┤
+│  CIEL CORE    domaine + moteurs + orchestrateur                  │
+│  (portable)   TypeScript, zéro dépendance, zéro API plateforme   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-Résultat possible d'une mission : `COMPLETED_VERIFIED`, `COMPLETED_PARTIALLY_VERIFIED`,
-`BLOCKED`, `WAITING_FOR_USER`, `FAILED`. **`BLOCKED` est un succès du système** quand le plan
-était faux : Ciel a refusé de mentir sur un résultat non vérifié.
+Le Core ne fait **aucun** appel implicite : horloge, identifiants, stockage, capacités et
+modèle sont injectés par `ciel-core/runtime.ts` (`createCiel`).
+
+```
+ciel-core/
+├── core/            types.ts · clock.ts · ids.ts · fingerprint.ts · predicate.ts · config.ts
+├── domain/          mission · plan · knowledge · evidence · decision · confidence · strategy
+│                    actionGraph · ledger · checkpoint · verification · budget · experience
+├── engines/         goalKernel · planSynthesis · missionCompiler · executor · capabilityRegistry
+│                    verificationEngine · arbitration · strategySelector · invalidation
+│                    loopDetector · ledgerService · checkpointService · recoveryEngine
+│                    learning · metaReasoning · sufficiency
+├── interfaces/      capability · memoryStore · intelligenceProvider
+├── adapters/        memory/inMemoryStore · fs/fileStore · base44/entityStore
+│                    intelligence/{nullProvider,base44Provider}
+├── capabilities/    reference.ts (6 capacités déterministes) · world.ts
+├── tests/           runner.ts + phaseA…phaseI (172 tests, sans framework)
+├── server/main.ts   API HTTP portable (Bun / Deno / Node)
+├── bin/ciel.mjs     CLI
+├── orchestrator.ts  intention → mission → vérification → journal
+├── runtime.ts       createCiel() — assemblage par injection
+├── index.ts         point d'entrée public (139 exports)
+└── status.ts        registre d'honnêteté (57 composants + NOT_CLAIMED)
+
+base44/
+├── config.jsonc     nom, commandes de build/serve
+├── entities/        CielRecord (persistance générique) · User
+└── functions/       cielSelfTest · cielPersistenceCheck · cielIntelligenceCheck · cielRun
+
+src/                 console React (Base44) — onglets Tests / Composants / Persistance /
+                     Intelligence / Mission
+```
+
+---
+
+## 4. Le cycle de vie d'une mission (le code réel)
+
+`ciel.run(intention)` → `ciel-core/orchestrator.ts` :
+
+```
+intention
+  │
+  ├─ goalKernel.classify()          sans IA : conversation / question / conseil / mission
+  │     └─ conversation, question → NOT_EXECUTABLE (Ciel dit qu'il n'a pas de surface de dialogue)
+  │
+  ├─ plan
+  │     ├─ plan structuré fourni → utilisé tel quel (validé)
+  │     └─ prose + IA activée → planSynthesis : le modèle PROPOSE un plan JSON
+  │           ├─ contrat de sortie vérifié      (texte libre refusé)
+  │           ├─ validatePlan                  (ids, dépendances, cycles)
+  │           └─ capacités inconnues → REJECTED (aucune invention)
+  │
+  ├─ confirmation                    un plan écrit par une IA n'est jamais exécuté seul
+  │      proposition PERSISTÉE (proposal_id + empreinte) → AWAITING_CONFIRMATION
+  │      l'humain confirme CETTE proposition ; une proposition altérée est refusée
+  │
+  ├─ sufficiency                     REFUSE bloque une action irréversible non vérifiable
+  │
+  ├─ missionCompiler.compile()       plan → mission + tâches, ordre topologique
+  │
+  └─ executor.run()                  pour chaque tâche, dans cet ordre :
+        ├─ budget → capacité/permission → plan d'action (risque + politique de rejeu)
+        ├─ confirmation explicite des actions irréversibles
+        ├─ préconditions (empreintes) vérifiées
+        ├─ checkpoint AVANT l'action (synchrone, avec l'action en vol)
+        ├─ capability.execute()                 (aucun appel de modèle ici — jamais)
+        ├─ observation → intégrité → preuve
+        ├─ verificationEngine                    EXECUTED → VERIFIED | UNVERIFIED | CONTRADICTED
+        ├─ invalidation en cascade               ce que cette action rend obsolète
+        ├─ loopDetector (historique PAR mission)
+        └─ échec → méta-raisonnement             repli déclaré d'abord, IA arbitrée ensuite
+        journal.append() à chaque étape          (chaîné par hachage)
+```
+
+Le rapport final est un **compte rendu**, pas une promesse :
+
+`COMPLETED_VERIFIED` · `COMPLETED_PARTIALLY_VERIFIED` · `COMPLETED_UNVERIFIED` · `BLOCKED` ·
+`WAITING_FOR_USER` · `FAILED` — et le verdict de chaîne est recalculé avant de le renvoyer.
 
 Après un crash : `recoveryEngine` relit le dernier checkpoint. Action idempotente →
-`REPLAY_ALLOWED`. Action non idempotente → `PROBE_BEFORE_REPLAY` : on sonde l'effet ; si
-l'effet est indéterminable, la mission passe en `WAITING_FOR_USER`. Jamais de rejeu aveugle.
+`REPLAY_ALLOWED`. Action non idempotente → sonde d'effet ; si l'effet est indéterminable, la
+mission passe en `WAITING_FOR_USER`. Jamais de rejeu aveugle.
 
 ---
 
-## 4. Comment il a été construit — phases A → H
+## 5. Comment il a été construit — phases A → I
 
-Chaque phase s'est terminée par une suite de tests déterministes (dans
-`base44/shared/ciel/tests/phaseX/`) et par une mise à jour de `status.ts`.
+Chaque phase se termine par une suite de tests déterministes et une mise à jour de `status.ts`.
 
 | Phase | Contenu | Preuve |
 |-------|---------|--------|
-| **A** | Vocabulaire, horloge/ids injectés, empreintes, config, tous les modèles de domaine, les trois interfaces, adaptateurs mémoire + IA nulle | `phaseA/` — dont `independence.test.ts` qui vérifie que le noyau n'importe rien de la plateforme |
-| **B** | Journal chaîné, checkpoints, persistance réelle via l'entité `CielRecord` | `phaseB/persistence.test.ts` + `cielPersistenceCheck` : mission exécutée, relue après redémarrage, chaîne intacte |
-| **C** | Noyau d'intention sans IA, compilateur, exécuteur de graphe, registre de capacités, capacités de référence | `phaseC/execution.test.ts`, `phaseC/goalKernel.test.ts` |
-| **D** | Arbitrage, moteur de vérification (4 vérificateurs), sélection de stratégie contextuelle | `phaseD/verification.test.ts` |
-| **E** | Invalidation en cascade par empreinte, moteur de reprise | `phaseE/invalidation.test.ts` |
-| **F** | Gestion de budget / plan de politique, détection de boucles | `phaseF/budgetLoop.test.ts` |
-| **G** | Expérience, calibration contextuelle, modèle de soi | `phaseG/learning.test.ts` |
-| **H** | Couche d'intelligence : `IntelligenceProvider` JSON strict, synthèse de plan, méta-raisonnement, suffisance cognitive | `phaseH/intelligence.test.ts` + `cielIntelligenceCheck` contre un vrai modèle |
+| **A** | Vocabulaire, horloge/ids injectés, empreintes, config, modèles de domaine, interfaces, adaptateurs mémoire + IA nulle | `phaseA/` (dont `independence.test.ts`) |
+| **B** | Journal chaîné, checkpoints, persistance Base44 | `phaseB/persistence.test.ts` + `cielPersistenceCheck` |
+| **C** | Noyau d'intention sans IA, compilateur, exécuteur, registre, capacités | `phaseC/` |
+| **D** | Arbitrage, vérification (4 vérificateurs), sélection de stratégie | `phaseD/verification.test.ts` |
+| **E** | Invalidation en cascade, reprise | `phaseE/invalidation.test.ts` |
+| **F** | Budget, détection de boucles | `phaseF/budgetLoop.test.ts` |
+| **G** | Expérience, calibration, modèle de soi | `phaseG/learning.test.ts` |
+| **H** | Couche d'intelligence : sortie JSON stricte, synthèse, méta-raisonnement, suffisance | `phaseH/intelligence.test.ts` |
+| **I** | **Orchestrateur de bout en bout**, proposition persistée + confirmation, persistance fichier, CLI, API HTTP | `phaseI/orchestrator.test.ts`, `phaseB/fileStore.test.ts` |
+
+**Total : 172 tests, 0 framework.** Ils tournent à l'identique sur Node, Deno, Bun et dans la
+fonction Base44 `cielSelfTest`.
 
 ### Impasses — déjà essayées, ne pas refaire
 
-- **Fusionner raisonnement / stratégie / méta-cognition** en un seul moteur : contredit la
-  modularité, empêche de faire évoluer l'un sans casser l'autre.
-- **Faire vérifier un résultat par un modèle** : refusé par `verification.ts` (un *performer*
-  de type IA est rejeté). Une IA ne peut pas être sa propre preuve.
-- **Copier la confiance déclarée par le modèle dans l'état interne** : `confidence.ts` la garde
-  en `claimed`, séparée.
+- **Fusionner raisonnement / stratégie / méta-cognition** : contredit la modularité.
+- **Faire vérifier un résultat par un modèle** : `verification.ts` rejette un performer `ai:*`.
+- **Copier la confiance déclarée par le modèle** dans l'état interne : gardée en `claimed`.
+- **Confirmer un plan en le re-synthétisant** : le modèle produit un plan différent à chaque
+  appel, donc une empreinte différente — la confirmation devenait impossible. D'où la
+  proposition persistée (`proposals`) introduite en phase I.
 
 ---
 
-## 5. Ce qui tourne réellement, et où le voir
+## 6. Ce qui tourne réellement, et où le voir
 
-Trois fonctions backend, toutes appelables depuis la console (`/` → `src/pages/CielConsole.jsx`) :
+### Console Base44 (onglet par onglet)
 
-| Fonction | Ce qu'elle prouve |
-|----------|-------------------|
-| `cielSelfTest` | Exécute l'intégralité des suites A→H et renvoie un rapport JSON agnostique (144 tests). |
-| `cielPersistenceCheck` | Persistance réelle : une mission écrite, relue dans un processus neuf, journal chaîné vérifié. |
-| `cielIntelligenceCheck` | Un vrai modèle propose un plan ; Ciel le valide, refuse les capacités inventées, garde la confiance interne à zéro, n'appelle aucun modèle pendant l'exécution, et ne rapporte comme succès que ce que la vérification a établi. |
+| Fonction | Ce qu'elle prouve | Accès |
+|----------|-------------------|-------|
+| `cielSelfTest` | exécute les 172 tests et renvoie le registre de statuts | admin |
+| `cielPersistenceCheck` | mission écrite, relue par un runtime neuf, chaîne vérifiée, journal append-only | admin |
+| `cielIntelligenceCheck` | un vrai modèle propose un plan ; Ciel le valide, refuse les capacités inventées, garde la confiance interne à zéro | admin |
+| `cielRun` | exécute une intention ou un plan depuis la console : `AWAITING_CONFIRMATION` puis confirmation par `proposal_id` | admin |
 
-Les résultats des tests sont **volontairement du JSON pur** : le harnais ne dépend d'aucun
-framework et tourne à l'identique hors de Base44.
+### Hors Base44
 
----
-
-## 6. Ce qui n'est PAS implémenté (et pourquoi)
-
-À lire avant de supposer qu'une capacité existe. Source de vérité : `status.ts`.
-
-| Composant | Statut | Raison |
-|-----------|--------|--------|
-| Capacités Shell / Filesystem / Git / MCP | `REQUIRES_EXTERNAL_RUNTIME` | Interface + mock présents. Un vrai processus système est impossible dans Base44. |
-| Adaptateurs Hermes / OpenClaw | `REQUIRES_EXTERNAL_RUNTIME` | Idem : contrat défini, exécution hors plateforme. |
-| Surfaces Telegram / CLI | `REQUIRES_EXTERNAL_RUNTIME` | Nécessitent un processus long ou un terminal. |
-| MemoryStore SQLite | `REQUIRES_EXTERNAL_RUNTIME` | Schéma et migrations prêts ; le pilote a besoin d'un runtime fichier. |
-| Providers Anthropic / OpenAI par clé | `REQUIRES_EXTERNAL_RUNTIME` | Même adaptateur, il suffit d'injecter la fonction d'appel. |
-| Mesure CPU / RAM du budget | `REQUIRES_EXTERNAL_RUNTIME` | Non mesurable ici ; les dimensions existent, non alimentées. |
+```bash
+npm test                      # 172 tests
+npm run ciel:status           # 57 composants, 6 non-revendications
+npm run ciel:serve            # API HTTP avec token obligatoire
+```
 
 ---
 
-## 7. Comment étendre Ciel sans le casser
+## 7. Ce qui n'est PAS implémenté (et pourquoi)
 
-**Ajouter une capacité** → un fichier dans `capabilities/`, avec un manifeste honnête :
+Source de vérité : `ciel-core/status.ts` (`COMPONENT_STATUS`, `NOT_CLAIMED`). **Aucun fichier
+n'existe** pour les lignes marquées « aucun fichier » : ne pas les supposer prêtes.
+
+| Composant | Statut | Réalité |
+|-----------|--------|---------|
+| Capacités Shell / Filesystem / Git / MCP | `NOT_IMPLEMENTED` | Aucun fichier. Les manifestes apparaissent seulement dans les tests, pour vérifier le refus d'une capacité non enregistrée. |
+| Adaptateurs Hermes / OpenClaw | `NOT_IMPLEMENTED` | Aucun fichier. |
+| Surface Telegram | `NOT_IMPLEMENTED` | Aucun fichier. |
+| MemoryStore SQLite | `NOT_IMPLEMENTED` | Aucun fichier, aucun schéma, aucune migration. La persistance durable existe mais passe par le système de fichiers (`adapters/fs`). |
+| Providers Anthropic / OpenAI livrés | `NOT_IMPLEMENTED` | `createLlmProvider({ invokeLLM })` accepte n'importe quel client : il reste à écrire cette fonction. Rien n'est fourni. |
+| Rejeu automatique d'un `fallback` déclaré | `NOT_IMPLEMENTED` | Le méta-raisonnement est consulté et journalisé ; l'action n'est pas rejouée automatiquement. |
+| Mesure CPU / RAM du budget | `REQUIRES_EXTERNAL_RUNTIME` | Dimensions déclarées, non alimentées. |
+| Journal *tamper-proof* | non revendiqué | La chaîne détecte l'altération, elle ne l'empêche pas. |
+| Isolation multi-utilisateurs du stockage | non revendiqué | Le store n'est pas partitionné par utilisateur ; c'est la responsabilité de l'appelant. |
+
+---
+
+## 8. Comment étendre Ciel sans le casser
+
+**Ajouter une capacité** → un fichier dans `ciel-core/capabilities/`, avec un manifeste honnête :
 `idempotent`, `reversible`, `side_effects`, `permissions`, `affected_state`, et une sonde
-d'effet si elle n'est pas idempotente. Un manifeste faux casse l'invariant 4.
+d'effet si elle n'est pas idempotente. Un manifeste faux casse l'invariant 4 — l'interface
+refuse d'ailleurs d'enregistrer une capacité non idempotente sans `probeEffect()`.
 
 **Ajouter un stockage** → implémenter `interfaces/memoryStore.ts` et l'injecter dans
 `createCiel`. Ne rien importer de la plateforme dans le Core.
 
-**Ajouter un modèle** → implémenter `interfaces/intelligenceProvider.ts` : sortie structurée
-obligatoire, texte libre refusé. Le modèle ne vérifie rien et n'exécute rien.
+**Ajouter un modèle** → implémenter `interfaces/intelligenceProvider.ts` (ou passer une fonction
+`invokeLLM` à `createLlmProvider`) : sortie structurée obligatoire, texte libre refusé.
 
-**Ajouter un moteur** → un fichier dans `engines/`, une suite de tests dans `tests/phaseX/`,
-une ligne dans `status.ts`. Pas de test = statut `NOT_IMPLEMENTED`.
+**Ajouter un moteur** → un fichier dans `engines/`, une suite dans `tests/phaseX/`, une ligne
+dans `status.ts`. Pas de test = statut `NOT_IMPLEMENTED`.
 
 ---
 
-## 8. Exécuter le projet en local
+## 9. Exécuter le projet en local
 
-### Prérequis
+### Noyau seul (sans Base44, sans installation)
 
-1. Cloner le dépôt, entrer dans le dossier.
-2. `npm install`
-3. `npm install -g base44@latest`
-4. Installer [Deno](https://docs.deno.com/runtime/getting_started/installation/) — le backend local tourne dessus.
+```bash
+node --experimental-strip-types ciel-core/bin/ciel.mjs test
+```
 
-### Lancer
+### Console Base44
+
+Prérequis : `npm install`, `npm install -g base44@latest`, et [Deno](https://docs.deno.com/runtime/getting_started/installation/).
 
 ```bash
 base44 login   # une fois par machine
-base44 link    # une fois par clone
+base44 link    # une fois par clone (écrit base44/.app.jsonc, gitignoré)
 base44 dev     # backend local + frontend ensemble
 ```
 
-Ouvrir l'URL frontend affichée (typiquement `http://localhost:5173`).
-
 Notes :
 
-- **Chaque nouveau clone a besoin de `base44 link`** : il écrit `base44/.app.jsonc` (volontairement gitignoré). L'app id est dans l'URL du Builder (`app.base44.com/apps/<id>/...`).
-- **`base44 dev` lance déjà le frontend** — ne jamais lancer `npm run dev` séparément.
-- **L'app doit avoir été publiée au moins une fois** pour que l'UI charge sous `base44 dev`.
-- Les données d'entités en local sont **en mémoire** et effacées à chaque redémarrage ; les intégrations Core et l'OAuth sont transmises à l'app déployée.
-
-### Frontend seul contre le backend hébergé
-
-```bash
-base44 dev --remote   # ⚠️ écrit dans les données de production
-```
+- **Chaque nouveau clone a besoin de `base44 link`** ; l'app id est dans l'URL du Builder.
+- **`base44 dev` lance déjà le frontend** — ne pas lancer `npm run dev` séparément.
+- L'app doit avoir été publiée au moins une fois pour que l'UI charge sous `base44 dev`.
+- Les données d'entités en local sont **en mémoire** ; les intégrations Core et l'OAuth sont
+  transmises à l'app déployée.
+- Frontend seul contre le backend hébergé : `base44 dev --remote`
+  ⚠️ écrit dans les données de production.
 
 ### Publier
 
@@ -264,7 +283,25 @@ Ce dépôt est synchronisé avec Base44 par git : pousser, puis publier depuis l
 
 ---
 
-## 9. Liens
+## 10. Vérifications
+
+```bash
+npm test        # 172 tests (noyau portable)
+npm run lint    # ESLint : src/ (React) + ciel-core/ (TypeScript)
+npm run build   # build Vite de la console
+npm run check   # les trois
+```
+
+La CI (`.github/workflows/ci.yml`) exécute ces trois commandes sur Node 22 à chaque push.
+
+Il n'y a **pas** de `typecheck` global : `tsc` sur un noyau volontairement non annoté produirait
+des centaines de faux positifs, et `checkJs` sur le boilerplate shadcn/ui (`src/components/ui/`)
+en produirait 386 autres. Le gate réel est ESLint + les tests + le build. Ne pas réintroduire un
+script `typecheck` qui échoue sans rien vérifier d'utile.
+
+---
+
+## 11. Liens
 
 - Intégration GitHub : https://docs.base44.com/developers/app-code/local-development/github
 - Développement local : https://docs.base44.com/developers/backend/overview/local-dev/local-development-overview

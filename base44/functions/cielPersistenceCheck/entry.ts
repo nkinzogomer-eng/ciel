@@ -1,12 +1,12 @@
 // Phase B persistence check, run against REAL persisted storage (Base44 entities).
 // The Core is untouched: only the MemoryStore adapter differs from the in-memory tests.
 // A second, freshly built runtime re-reads everything — that is the restart simulation.
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { createBase44EntityStore } from '../../shared/ciel/adapters/base44/entityStore.ts';
-import { createCiel } from '../../shared/ciel/runtime.ts';
-import { createWorld } from '../../shared/ciel/capabilities/world.ts';
-import { sequentialIds } from '../../shared/ciel/core/ids.ts';
-import { SystemClock } from '../../shared/ciel/core/clock.ts';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.53';
+import { createBase44EntityStore } from '../../../ciel-core/adapters/base44/entityStore.ts';
+import { createCiel } from '../../../ciel-core/runtime.ts';
+import { createWorld } from '../../../ciel-core/capabilities/world.ts';
+import { sequentialIds } from '../../../ciel-core/core/ids.ts';
+import { SystemClock } from '../../../ciel-core/core/clock.ts';
 
 const PERMISSIONS = ['state:write', 'email:send'];
 

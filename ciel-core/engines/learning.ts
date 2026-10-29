@@ -62,7 +62,7 @@ export function createLearningEngine({ store, clock, newId, ledger }) {
       });
 
       return {
-        can: capabilities.filter((c) => c.status === ComponentStatus.TESTED_IN_BASE44 || c.status === ComponentStatus.IMPLEMENTED).map((c) => c.capability),
+        can: capabilities.filter((c) => [ComponentStatus.TESTED, ComponentStatus.TESTED_IN_BASE44, ComponentStatus.IMPLEMENTED].includes(c.status)).map((c) => c.capability),
         cannot: componentStatus
           .filter((c) => c.status === ComponentStatus.NOT_IMPLEMENTED || c.status === ComponentStatus.REQUIRES_EXTERNAL_RUNTIME)
           .map((c) => ({ component: c.component, status: c.status, phase: c.phase })),

@@ -16,7 +16,7 @@ import { CielError } from '../core/types.ts';
 export const COLLECTIONS = Object.freeze([
   'missions', 'tasks', 'events', 'checkpoints', 'knowledge', 'hypotheses', 'evidence', 'observations',
   'decisions', 'strategies', 'action_plans', 'experiences', 'predictions', 'verifications', 'budgets',
-  'capabilities', 'providers', 'diagnostics',
+  'capabilities', 'providers', 'diagnostics', 'proposals',
 ]);
 
 export const MEMORY_STORE_METHODS = Object.freeze([

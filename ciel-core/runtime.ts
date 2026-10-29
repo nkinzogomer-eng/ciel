@@ -1,6 +1,6 @@
 // Ciel runtime assembly. Pure composition: nothing here knows about Base44.
-// The same factory is used by the test harness, by the Base44 surface and (unchanged)
-// by an external Deno/Node runtime.
+// The same factory is used by the test harness, by the Base44 surface, by the standalone
+// CLI/HTTP server and (unchanged) by any external Deno/Node/Bun runtime.
 import { SystemClock, assertClock } from './core/clock.ts';
 import { newId as randomId } from './core/ids.ts';
 import { createConfig, degradationLevel } from './core/config.ts';
@@ -17,6 +17,10 @@ import { createExecutor } from './engines/executor.ts';
 import { registerReferenceCapabilities } from './capabilities/reference.ts';
 import { createPlanSynthesizer } from './engines/planSynthesis.ts';
 import { createMetaReasoner } from './engines/metaReasoning.ts';
+import { createOrchestrator } from './orchestrator.ts';
+import { classifyIntake } from './engines/goalKernel.ts';
+import { assessSufficiency } from './engines/sufficiency.ts';
+import { selectStrategy, reconsider } from './engines/strategySelector.ts';
 import { assertIntelligenceProvider } from './interfaces/intelligenceProvider.ts';
 
 export function createCiel({
@@ -40,11 +44,27 @@ export function createCiel({
   const synthesizer = createPlanSynthesizer({ provider, registry, config });
   const meta = createMetaReasoner({ provider, config, clock, newId });
 
+  // The single end-to-end entry point: intention -> mission -> verified outcome -> ledger.
+  const orchestrator = createOrchestrator({
+    store, clock, newId, ledger, registry, config,
+    compiler, executor, recovery, synthesizer, meta, provider,
+  });
+
   return {
     config, store, clock, newId, world, provider,
     registry, ledger, checkpoints, recovery, verifier, loop, learning, compiler, executor, synthesizer, meta,
     // Reachability is checked by the caller (isAvailable is async); unknown means "not reachable".
     degradation: degradationLevel(config, provider ? Boolean(providerAvailable ?? provider.available) : false),
     ai_enabled: config.ai.enabled,
+
+    // --- surfaces over the engines -------------------------------------------
+    // `run(intent)` is the whole pipeline. `intake` and `sufficiency` are exposed because
+    // they are decisions a caller may want to take alone (e.g. a UI previewing classification).
+    orchestrator,
+    run: (input, options) => orchestrator.handle(input, options),
+    resume: (mission_id, options) => orchestrator.resume(mission_id, options),
+    intake: { classify: classifyIntake },
+    sufficiency: { assess: assessSufficiency },
+    strategy: { select: selectStrategy, reconsider },
   };
 }

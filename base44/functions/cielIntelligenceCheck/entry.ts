@@ -3,16 +3,16 @@
 //   1. the LLM adapter respects the AiOutput contract;
 //   2. a model-written plan passes Ciel's own validation and runs on the deterministic engine;
 //   3. a plan asking for a capability Ciel does not have is refused, not improvised.
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { createCiel } from '../../shared/ciel/runtime.ts';
-import { createInMemoryStore } from '../../shared/ciel/adapters/memory/inMemoryStore.ts';
-import { createWorld } from '../../shared/ciel/capabilities/world.ts';
-import { createConfig } from '../../shared/ciel/core/config.ts';
-import { sequentialIds } from '../../shared/ciel/core/ids.ts';
-import { SystemClock } from '../../shared/ciel/core/clock.ts';
-import { createLlmProvider } from '../../shared/ciel/adapters/intelligence/base44Provider.ts';
-import { SynthesisOutcome } from '../../shared/ciel/engines/planSynthesis.ts';
-import { overallConfidence } from '../../shared/ciel/domain/confidence.ts';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.53';
+import { createCiel } from '../../../ciel-core/runtime.ts';
+import { createInMemoryStore } from '../../../ciel-core/adapters/memory/inMemoryStore.ts';
+import { createWorld } from '../../../ciel-core/capabilities/world.ts';
+import { createConfig } from '../../../ciel-core/core/config.ts';
+import { sequentialIds } from '../../../ciel-core/core/ids.ts';
+import { SystemClock } from '../../../ciel-core/core/clock.ts';
+import { createLlmProvider } from '../../../ciel-core/adapters/intelligence/base44Provider.ts';
+import { SynthesisOutcome } from '../../../ciel-core/engines/planSynthesis.ts';
+import { overallConfidence } from '../../../ciel-core/domain/confidence.ts';
 
 export default async function (req) {
   try {

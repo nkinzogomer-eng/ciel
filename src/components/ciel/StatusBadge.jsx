@@ -1,7 +1,8 @@
 import React from 'react';
 
 const STYLES = {
-  TESTED_IN_BASE44: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  TESTED: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  TESTED_IN_BASE44: 'bg-teal-100 text-teal-800 border-teal-200',
   IMPLEMENTED: 'bg-sky-100 text-sky-800 border-sky-200',
   SIMULATED: 'bg-amber-100 text-amber-800 border-amber-200',
   STUB: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -10,7 +11,8 @@ const STYLES = {
 };
 
 const LABELS = {
-  TESTED_IN_BASE44: 'Testé ici',
+  TESTED: 'Testé (portable)',
+  TESTED_IN_BASE44: 'Testé sur Base44',
   IMPLEMENTED: 'Implémenté',
   SIMULATED: 'Simulé',
   STUB: 'Ébauche',

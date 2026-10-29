@@ -92,8 +92,11 @@ export const BudgetDecision = enumOf(
 
 // ---- Capabilities / portability ----------------------------------------
 export const RuntimeRequirement = enumOf('ANY', 'BASE44', 'EXTERNAL');
+// TESTED            proven by the portable suite (runs on Node/Deno/Bun AND inside Base44)
+// TESTED_IN_BASE44  proven specifically against the platform (persistence, platform LLM)
 export const ComponentStatus = enumOf(
-  'IMPLEMENTED', 'TESTED_IN_BASE44', 'SIMULATED', 'STUB', 'NOT_IMPLEMENTED', 'REQUIRES_EXTERNAL_RUNTIME',
+  'IMPLEMENTED', 'TESTED', 'TESTED_IN_BASE44', 'SIMULATED', 'STUB', 'NOT_IMPLEMENTED',
+  'REQUIRES_EXTERNAL_RUNTIME',
 );
 
 // ---- Ledger -------------------------------------------------------------

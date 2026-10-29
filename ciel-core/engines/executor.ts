@@ -45,6 +45,10 @@ export function createExecutor({ store, clock, newId, ledger, checkpoints, regis
   async function run(mission_id, { world = null, observe = null, humanAnswers = {}, confirmations = {}, maxSteps = 50 } = {}) {
     let mission = await store.get('missions', mission_id);
     if (!mission) throw new CielError('UNKNOWN_MISSION', `mission ${mission_id} does not exist`);
+    // A new execution window starts with no loop history for THIS mission. The detector is
+    // scoped by mission, so nothing is forgotten about other missions and nothing is
+    // inherited from a previous run of this one.
+    if (typeof loop.clear === 'function') loop.clear({ mission_id });
     let tasks = await store.find('tasks', { mission_id });
     let budget = (await store.find('budgets', { mission_id }))[0] || null;
     const steps = [];
@@ -241,7 +245,7 @@ export function createExecutor({ store, clock, newId, ledger, checkpoints, regis
       }
 
       // --- loop detection ----------------------------------------------------
-      const l = await loop.record({ capability: capabilityName, params: task.action.params, outcome: result.output });
+      const l = await loop.record({ mission_id, capability: capabilityName, params: task.action.params, outcome: result.output });
       await checkpoints.save({ mission, tasks, in_flight_actions: [] });
       steps.push({ task_id: task.id, capability: capabilityName, result: task.status, verification: v.state });
 

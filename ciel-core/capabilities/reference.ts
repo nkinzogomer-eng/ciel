@@ -9,7 +9,7 @@
 import { CielError, ComponentStatus, RuntimeRequirement } from '../core/types.ts';
 import { createManifest } from '../interfaces/capability.ts';
 
-const base = { requires_runtime: RuntimeRequirement.ANY, status: ComponentStatus.TESTED_IN_BASE44 };
+const base = { requires_runtime: RuntimeRequirement.ANY, status: ComponentStatus.TESTED };
 
 export function dataTransform() {
   return {
